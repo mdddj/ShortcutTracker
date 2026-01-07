@@ -64,6 +64,9 @@ struct ShortcutTrackerApp: App {
     /// Shared DataService instance
     @State private var dataService: DataService?
     
+    /// Local backup service for auto-sync
+    @State private var localBackupService = LocalBackupService()
+    
     /// App selector controller for global hotkey
     @State private var appSelectorController = AppSelectorController.shared
 
@@ -212,6 +215,10 @@ struct ShortcutTrackerApp: App {
         
         // Set dataService for app selector
         appSelectorController.dataService = sharedDataService
+        
+        // Setup local backup service for auto-sync
+        localBackupService.setup(with: sharedModelContainer.mainContext)
+        setupAutoBackup(dataService: sharedDataService)
 
         // Refresh keystroke overlay shortcut cache
         refreshKeystrokeOverlayCache(dataService: sharedDataService)
@@ -298,5 +305,56 @@ struct ShortcutTrackerApp: App {
         }
 
         showAIImportSheet = true
+    }
+    
+    /// Sets up auto backup functionality
+    private func setupAutoBackup(dataService: DataService) {
+        // Handle external changes detected by file monitor
+        localBackupService.onExternalChangesDetected = { [self] in
+            Task { @MainActor in
+                do {
+                    try await localBackupService.importFromBackup(context: sharedModelContainer.mainContext)
+                    // Refresh UI after import
+                    appViewModel?.loadApps()
+                    NotificationCenter.default.post(name: .shortcutsDidChange, object: nil)
+                    print("Auto-imported from external backup changes")
+                } catch {
+                    print("Auto-import failed: \(error)")
+                }
+            }
+        }
+        
+        // Auto backup when shortcuts change
+        NotificationCenter.default.addObserver(
+            forName: .shortcutsDidChange,
+            object: nil,
+            queue: .main
+        ) { [self] _ in
+            guard localBackupService.autoSyncEnabled else { return }
+            Task {
+                do {
+                    let apps = dataService.fetchApps()
+                    try await localBackupService.saveBackup(apps: apps)
+                    print("Auto-backup completed")
+                } catch {
+                    print("Auto-backup failed: \(error)")
+                }
+            }
+        }
+        
+        // Initial backup check - import if backup exists and is newer
+        Task {
+            if localBackupService.autoSyncEnabled && localBackupService.backupExists {
+                do {
+                    try await localBackupService.importFromBackup(context: sharedModelContainer.mainContext)
+                    await MainActor.run {
+                        appViewModel?.loadApps()
+                    }
+                    print("Initial backup import completed")
+                } catch {
+                    print("Initial backup import failed: \(error)")
+                }
+            }
+        }
     }
 }

@@ -15,11 +15,33 @@ struct FloatingPanelContentView: View {
     @State private var newShortcutKeys = ""
     @State private var newShortcutCategory = ""
     @State private var isGridView = false
+    @State private var searchText = ""
+    @State private var isSearching = false
+    @FocusState private var isSearchFieldFocused: Bool
+    
+    /// Filtered shortcuts based on search text
+    private var filteredShortcuts: [ShortcutItem] {
+        guard !searchText.isEmpty else {
+            return viewModel.currentShortcuts
+        }
+        let query = searchText.lowercased()
+        return viewModel.currentShortcuts.filter { shortcut in
+            shortcut.title.lowercased().contains(query) ||
+            shortcut.keys.lowercased().contains(query) ||
+            (shortcut.category?.lowercased().contains(query) ?? false) ||
+            (shortcut.shortcutDescription?.lowercased().contains(query) ?? false)
+        }
+    }
     
     var body: some View {
         VStack(spacing: 0) {
             // Header with app name and controls
             headerView
+            
+            // Search bar (collapsible)
+            if isSearching {
+                searchBarView
+            }
             
             Divider()
             
@@ -52,6 +74,25 @@ struct FloatingPanelContentView: View {
                 .lineLimit(1)
             
             Spacer()
+            
+            // Search toggle
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isSearching.toggle()
+                    if isSearching {
+                        showSettings = false
+                        showAddShortcut = false
+                        isSearchFieldFocused = true
+                    } else {
+                        searchText = ""
+                    }
+                }
+            } label: {
+                Image(systemName: isSearching ? "magnifyingglass.circle.fill" : "magnifyingglass")
+                    .foregroundStyle(isSearching ? Color.accentColor : Color.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Search shortcuts (⌘F)")
             
             // View mode toggle
             Button {
@@ -121,13 +162,49 @@ struct FloatingPanelContentView: View {
         .padding(.vertical, 12)
     }
     
+    // MARK: - Search Bar View
+    
+    private var searchBarView: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            
+            TextField("搜索快捷键...", text: $searchText)
+                .textFieldStyle(.plain)
+                .focused($isSearchFieldFocused)
+            
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            
+            Text("\(filteredShortcuts.count)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(Color.secondary.opacity(0.2)))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+    }
+    
     // MARK: - Shortcuts List View
     
     private var shortcutsListView: some View {
         Group {
-            if viewModel.currentShortcuts.isEmpty {
-                emptyStateView
-                    .transition(.opacity)
+            if filteredShortcuts.isEmpty {
+                if searchText.isEmpty {
+                    emptyStateView
+                } else {
+                    noSearchResultsView
+                }
             } else {
                 ScrollView {
                     if isGridView {
@@ -136,8 +213,8 @@ struct FloatingPanelContentView: View {
                             GridItem(.flexible(), spacing: 8),
                             GridItem(.flexible(), spacing: 8)
                         ], spacing: 8) {
-                            ForEach(viewModel.currentShortcuts) { shortcut in
-                                FloatingPanelShortcutGridItem(shortcut: shortcut)
+                            ForEach(filteredShortcuts) { shortcut in
+                                FloatingPanelShortcutGridItem(shortcut: shortcut, searchText: searchText)
                                     .transition(.asymmetric(
                                         insertion: .opacity.combined(with: .scale(scale: 0.95)),
                                         removal: .opacity.combined(with: .scale(scale: 0.95))
@@ -148,8 +225,8 @@ struct FloatingPanelContentView: View {
                     } else {
                         // List view
                         LazyVStack(spacing: 8) {
-                            ForEach(viewModel.currentShortcuts) { shortcut in
-                                FloatingPanelShortcutRow(shortcut: shortcut)
+                            ForEach(filteredShortcuts) { shortcut in
+                                FloatingPanelShortcutRow(shortcut: shortcut, searchText: searchText)
                                     .transition(.asymmetric(
                                         insertion: .opacity.combined(with: .scale(scale: 0.95)),
                                         removal: .opacity.combined(with: .scale(scale: 0.95))
@@ -159,10 +236,10 @@ struct FloatingPanelContentView: View {
                         .padding(12)
                     }
                 }
-                .animation(.easeInOut(duration: 0.2), value: viewModel.currentShortcuts.map { $0.id })
+                .animation(.easeInOut(duration: 0.2), value: filteredShortcuts.map { $0.id })
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: viewModel.currentShortcuts.isEmpty)
+        .animation(.easeInOut(duration: 0.2), value: filteredShortcuts.isEmpty)
         .animation(.easeInOut(duration: 0.2), value: isGridView)
     }
     
@@ -189,6 +266,29 @@ struct FloatingPanelContentView: View {
                     .font(.subheadline)
                     .foregroundStyle(.tertiary)
             }
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    // MARK: - No Search Results View
+    
+    private var noSearchResultsView: some View {
+        VStack(spacing: 12) {
+            Spacer()
+            
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 40))
+                .foregroundStyle(.tertiary)
+            
+            Text("未找到结果")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+            
+            Text("没有匹配 \"\(searchText)\" 的快捷键")
+                .font(.subheadline)
+                .foregroundStyle(.tertiary)
             
             Spacer()
         }
@@ -324,13 +424,14 @@ struct FloatingPanelContentView: View {
 /// Requirements: 4.2
 struct FloatingPanelShortcutRow: View {
     let shortcut: ShortcutItem
+    var searchText: String = ""
     
     @State private var isHovered = false
     
     var body: some View {
         HStack(spacing: 12) {
             // Key combination badge
-            Text(shortcut.keys)
+            HighlightedText(text: shortcut.keys, highlight: searchText, isMonospaced: true)
                 .font(.system(.callout, design: .monospaced))
                 .fontWeight(.medium)
                 .padding(.horizontal, 8)
@@ -342,7 +443,7 @@ struct FloatingPanelShortcutRow: View {
                 .foregroundStyle(Color.accentColor)
             
             // Title
-            Text(shortcut.title)
+            HighlightedText(text: shortcut.title, highlight: searchText)
                 .font(.callout)
                 .lineLimit(1)
             
@@ -350,7 +451,7 @@ struct FloatingPanelShortcutRow: View {
             
             // Category tag (if present)
             if let category = shortcut.category, !category.isEmpty {
-                Text(category)
+                HighlightedText(text: category, highlight: searchText)
                     .font(.caption2)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
@@ -381,13 +482,14 @@ struct FloatingPanelShortcutRow: View {
 /// Compact shortcut card for the floating panel grid view.
 struct FloatingPanelShortcutGridItem: View {
     let shortcut: ShortcutItem
+    var searchText: String = ""
     
     @State private var isHovered = false
     
     var body: some View {
         VStack(spacing: 8) {
             // Key combination badge
-            Text(shortcut.keys)
+            HighlightedText(text: shortcut.keys, highlight: searchText, isMonospaced: true)
                 .font(.system(.title3, design: .monospaced))
                 .fontWeight(.semibold)
                 .foregroundStyle(Color.accentColor)
@@ -395,7 +497,7 @@ struct FloatingPanelShortcutGridItem: View {
                 .minimumScaleFactor(0.7)
             
             // Title
-            Text(shortcut.title)
+            HighlightedText(text: shortcut.title, highlight: searchText)
                 .font(.caption)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
@@ -418,6 +520,52 @@ struct FloatingPanelShortcutGridItem: View {
                 isHovered = hovering
             }
         }
+    }
+}
+
+// MARK: - Highlighted Text View
+
+/// A view that displays text with highlighted search matches
+struct HighlightedText: View {
+    let text: String
+    let highlight: String
+    var isMonospaced: Bool = false
+    
+    var body: some View {
+        if highlight.isEmpty {
+            Text(text)
+        } else {
+            highlightedTextView
+        }
+    }
+    
+    private var highlightedTextView: some View {
+        let attributedString = createHighlightedAttributedString()
+        return Text(attributedString)
+    }
+    
+    private func createHighlightedAttributedString() -> AttributedString {
+        var attributedString = AttributedString(text)
+        let lowercasedText = text.lowercased()
+        let lowercasedHighlight = highlight.lowercased()
+        
+        var searchStartIndex = lowercasedText.startIndex
+        
+        while let range = lowercasedText.range(of: lowercasedHighlight, range: searchStartIndex..<lowercasedText.endIndex) {
+            // Convert String.Index to AttributedString.Index
+            let startOffset = lowercasedText.distance(from: lowercasedText.startIndex, to: range.lowerBound)
+            let endOffset = lowercasedText.distance(from: lowercasedText.startIndex, to: range.upperBound)
+            
+            let attrStart = attributedString.index(attributedString.startIndex, offsetByCharacters: startOffset)
+            let attrEnd = attributedString.index(attributedString.startIndex, offsetByCharacters: endOffset)
+            
+            attributedString[attrStart..<attrEnd].backgroundColor = .yellow.opacity(0.4)
+            attributedString[attrStart..<attrEnd].foregroundColor = .black
+            
+            searchStartIndex = range.upperBound
+        }
+        
+        return attributedString
     }
 }
 

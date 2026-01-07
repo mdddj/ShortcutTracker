@@ -15,6 +15,12 @@ struct SettingsView: View {
                     Label("General", systemImage: "gear")
                 }
             
+            // Backup settings tab
+            BackupSettingsTab()
+                .tabItem {
+                    Label("Backup", systemImage: "externaldrive")
+                }
+            
             // Keystroke Overlay settings tab
             KeystrokeOverlaySettingsTab()
                 .tabItem {

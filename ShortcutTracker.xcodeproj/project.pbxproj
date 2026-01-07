@@ -40,6 +40,8 @@
 		A100009D /* KeystrokeOverlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100009E /* KeystrokeOverlayController.swift */; };
 		A100009F /* KeystrokeOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000A0 /* KeystrokeOverlayView.swift */; };
 		A10000B1 /* ShortcutExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000B2 /* ShortcutExporter.swift */; };
+		A10000E0 /* LocalBackupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000E1 /* LocalBackupService.swift */; };
+		A10000E2 /* BackupSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000E3 /* BackupSettingsTab.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -78,6 +80,8 @@
 		A100009E /* KeystrokeOverlayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeystrokeOverlayController.swift; sourceTree = "<group>"; };
 		A10000A0 /* KeystrokeOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeystrokeOverlayView.swift; sourceTree = "<group>"; };
 		A10000B2 /* ShortcutExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutExporter.swift; sourceTree = "<group>"; };
+		A10000E1 /* LocalBackupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalBackupService.swift; sourceTree = "<group>"; };
+		A10000E3 /* BackupSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupSettingsTab.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -137,6 +141,7 @@
 			children = (
 				A1000021 /* DataService.swift */,
 				A10000B2 /* ShortcutExporter.swift */,
+				A10000E1 /* LocalBackupService.swift */,
 				A1000086 /* AI */,
 			);
 			path = Services;
@@ -238,6 +243,7 @@
 			isa = PBXGroup;
 			children = (
 				A1000096 /* SettingsView.swift */,
+				A10000E3 /* BackupSettingsTab.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -361,6 +367,8 @@
 				A100009D /* KeystrokeOverlayController.swift in Sources */,
 				A100009F /* KeystrokeOverlayView.swift in Sources */,
 				A10000B1 /* ShortcutExporter.swift in Sources */,
+				A10000E0 /* LocalBackupService.swift in Sources */,
+				A10000E2 /* BackupSettingsTab.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

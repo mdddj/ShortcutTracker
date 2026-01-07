@@ -1,0 +1,99 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build:
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Build Release
+        run: |
+          xcodebuild -scheme ShortcutTracker \
+            -configuration Release \
+            -archivePath build/ShortcutTracker.xcarchive \
+            archive \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+      
+      - name: Export App
+        run: |
+          mkdir -p build/export
+          cp -R build/ShortcutTracker.xcarchive/Products/Applications/ShortcutTracker.app build/export/
+      
+      - name: Create DMG
+        run: |
+          # Create DMG folder structure
+          mkdir -p build/dmg
+          cp -R build/export/ShortcutTracker.app build/dmg/
+          ln -s /Applications build/dmg/Applications
+          
+          # Create DMG
+          hdiutil create -volname "ShortcutTracker" \
+            -srcfolder build/dmg \
+            -ov -format UDZO \
+            build/ShortcutTracker-${{ steps.version.outputs.VERSION }}.dmg
+      
+      - name: Create ZIP
+        run: |
+          cd build/export
+          zip -r ../ShortcutTracker-${{ steps.version.outputs.VERSION }}.zip ShortcutTracker.app
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShortcutTracker-${{ steps.version.outputs.VERSION }}
+          path: |
+            build/ShortcutTracker-${{ steps.version.outputs.VERSION }}.dmg
+            build/ShortcutTracker-${{ steps.version.outputs.VERSION }}.zip
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: ShortcutTracker ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## ShortcutTracker ${{ steps.version.outputs.VERSION }}
+            
+            ### 安装方式
+            1. 下载 DMG 文件
+            2. 打开 DMG，将 ShortcutTracker 拖入 Applications 文件夹
+            3. 首次打开时，右键点击应用选择"打开"
+            
+            ### 下载
+            - **DMG**: ShortcutTracker-${{ steps.version.outputs.VERSION }}.dmg
+            - **ZIP**: ShortcutTracker-${{ steps.version.outputs.VERSION }}.zip
+          files: |
+            build/ShortcutTracker-${{ steps.version.outputs.VERSION }}.dmg
+            build/ShortcutTracker-${{ steps.version.outputs.VERSION }}.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

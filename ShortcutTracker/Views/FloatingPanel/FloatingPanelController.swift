@@ -2,13 +2,19 @@ import AppKit
 import SwiftUI
 import Combine
 
+/// Custom NSPanel subclass that can become key window for text input
+class KeyablePanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
 /// Controller for managing the floating panel window.
 /// Uses NSPanel to create a floating, draggable, transparent overlay window.
 /// Supports state synchronization with the main window selection.
 /// Requirements: 4.1, 4.2, 4.3, 4.7
 class FloatingPanelController: NSObject, ObservableObject {
     /// The NSPanel instance for the floating window
-    private var panel: NSPanel?
+    private var panel: KeyablePanel?
     
     /// The hosting view for SwiftUI content
     private var hostingView: NSHostingView<AnyView>?
@@ -63,6 +69,7 @@ class FloatingPanelController: NSObject, ObservableObject {
         // Animate fade in
         panel.alphaValue = 0.0
         panel.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)  // Activate app to receive keyboard input
         
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.2
@@ -156,15 +163,14 @@ class FloatingPanelController: NSObject, ObservableObject {
     /// Creates and configures the NSPanel.
     /// Requirements: 4.1, 4.7
     private func createPanel() {
-        // Create panel with specific style mask for floating behavior
+        // Create panel with borderless style but using custom subclass for key window support
         let styleMask: NSWindow.StyleMask = [
-            .borderless,           // No title bar
-            .nonactivatingPanel,   // Doesn't steal focus from other apps
-            .resizable,            // Allow resizing
-            .fullSizeContentView   // Content extends to full window
+            .borderless,
+            .resizable,
+            .fullSizeContentView
         ]
         
-        let panel = NSPanel(
+        let panel = KeyablePanel(
             contentRect: NSRect(origin: .zero, size: defaultSize),
             styleMask: styleMask,
             backing: .buffered,
@@ -173,8 +179,8 @@ class FloatingPanelController: NSObject, ObservableObject {
         
         // Configure panel properties
         panel.isFloatingPanel = true
-        panel.becomesKeyOnlyIfNeeded = true
-        panel.isMovableByWindowBackground = true  // Enable dragging
+        panel.becomesKeyOnlyIfNeeded = false
+        panel.isMovableByWindowBackground = true
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
