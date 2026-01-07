@@ -6,6 +6,15 @@ import Combine
 class KeyablePanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+    
+    // Override to maintain floating behavior
+    override func orderOut(_ sender: Any?) {
+        // Don't hide when losing focus if we're supposed to be floating
+        if level == .floating {
+            return
+        }
+        super.orderOut(sender)
+    }
 }
 
 /// Controller for managing the floating panel window.
@@ -118,6 +127,12 @@ class FloatingPanelController: NSObject, ObservableObject {
         updatePanelLevel()
     }
     
+    /// Toggles the pin state of the panel.
+    func togglePin() {
+        isPinned.toggle()
+        updatePanelLevel()
+    }
+    
     /// Sets the transparency of the panel with smooth animation.
     /// - Parameter alpha: The alpha value between 0.0 (fully transparent) and 1.0 (fully opaque)
     /// - Parameter animated: Whether to animate the transparency change (default: true)
@@ -185,6 +200,7 @@ class FloatingPanelController: NSObject, ObservableObject {
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.minSize = minSize
+        panel.hidesOnDeactivate = false  // 防止失去焦点时隐藏
         
         // Set initial level based on pin state
         panel.level = isPinned ? .floating : .normal
@@ -217,6 +233,13 @@ class FloatingPanelController: NSObject, ObservableObject {
     
     /// Updates the panel's window level based on pin state.
     private func updatePanelLevel() {
-        panel?.level = isPinned ? .floating : .normal
+        guard let panel = panel else { return }
+        panel.level = isPinned ? .floating : .normal
+        panel.hidesOnDeactivate = !isPinned  // 只有非置顶时才允许隐藏
+        
+        // 如果是置顶状态，确保窗口可见
+        if isPinned && !panel.isVisible {
+            panel.orderFront(nil)
+        }
     }
 }
