@@ -38,29 +38,31 @@ struct FloatingPanelContentView: View {
             // Header with app name and controls
             headerView
             
-            // Search bar (collapsible)
-            if isSearching {
-                searchBarView
-            }
-            
-            Divider()
-            
-            // Shortcuts list
-            shortcutsListView
-            
-            // Add shortcut panel (collapsible)
-            if showAddShortcut {
+            if !viewModel.isCollapsed {
+                // Search bar (collapsible)
+                if isSearching {
+                    searchBarView
+                }
+                
                 Divider()
-                addShortcutView
-            }
-            
-            // Settings panel (collapsible)               
-            if showSettings {
-                Divider()
-                settingsView
+                
+                // Shortcuts list
+                shortcutsListView
+                
+                // Add shortcut panel (collapsible)
+                if showAddShortcut {
+                    Divider()
+                    addShortcutView
+                }
+                
+                // Settings panel (collapsible)               
+                if showSettings {
+                    Divider()
+                    settingsView
+                }
             }
         }
-        .frame(minWidth: 280, maxWidth: .infinity, minHeight: 200, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.ultraThinMaterial)
     }
     
@@ -75,70 +77,89 @@ struct FloatingPanelContentView: View {
             
             Spacer()
             
-            // Search toggle
+            // Collapse/Expand toggle
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isSearching.toggle()
-                    if isSearching {
-                        showSettings = false
-                        showAddShortcut = false
-                        isSearchFieldFocused = true
-                    } else {
-                        searchText = ""
-                    }
+                viewModel.toggleCollapse()
+                if viewModel.isCollapsed {
+                    // 折叠时关闭其他面板
+                    showSettings = false
+                    showAddShortcut = false
+                    isSearching = false
+                    searchText = ""
                 }
             } label: {
-                Image(systemName: isSearching ? "magnifyingglass.circle.fill" : "magnifyingglass")
-                    .foregroundStyle(isSearching ? Color.accentColor : Color.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("Search shortcuts (⌘F)")
-            
-            // View mode toggle
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isGridView.toggle()
-                }
-            } label: {
-                Image(systemName: isGridView ? "list.bullet" : "square.grid.2x2")
+                Image(systemName: viewModel.isCollapsed ? "chevron.down" : "chevron.up")
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help(isGridView ? "Switch to list view" : "Switch to grid view")
+            .help(viewModel.isCollapsed ? "展开面板" : "折叠面板")
             
-            // Add shortcut button
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showAddShortcut.toggle()
-                    if showAddShortcut {
-                        showSettings = false
+            // 以下按钮在折叠状态下隐藏
+            if !viewModel.isCollapsed {
+                // Search toggle
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isSearching.toggle()
+                        if isSearching {
+                            showSettings = false
+                            showAddShortcut = false
+                            isSearchFieldFocused = true
+                        } else {
+                            searchText = ""
+                        }
                     }
+                } label: {
+                    Image(systemName: isSearching ? "magnifyingglass.circle.fill" : "magnifyingglass")
+                        .foregroundStyle(isSearching ? Color.accentColor : Color.secondary)
                 }
-            } label: {
-                Image(systemName: showAddShortcut ? "plus.circle.fill" : "plus.circle")
-                    .foregroundStyle(showAddShortcut ? Color.accentColor : Color.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("Add shortcut")
-            .disabled(viewModel.selectedApp == nil)
-            
-            // Settings toggle
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showSettings.toggle()
-                    if showSettings {
-                        showAddShortcut = false
+                .buttonStyle(.plain)
+                .help("Search shortcuts (⌘F)")
+                
+                // View mode toggle
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isGridView.toggle()
                     }
+                } label: {
+                    Image(systemName: isGridView ? "list.bullet" : "square.grid.2x2")
+                        .foregroundStyle(.secondary)
                 }
-            } label: {
-                Image(systemName: showSettings ? "gearshape.fill" : "gearshape")
-                    .foregroundStyle(.secondary)
+                .buttonStyle(.plain)
+                .help(isGridView ? "Switch to list view" : "Switch to grid view")
+                
+                // Add shortcut button
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showAddShortcut.toggle()
+                        if showAddShortcut {
+                            showSettings = false
+                        }
+                    }
+                } label: {
+                    Image(systemName: showAddShortcut ? "plus.circle.fill" : "plus.circle")
+                        .foregroundStyle(showAddShortcut ? Color.accentColor : Color.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Add shortcut")
+                .disabled(viewModel.selectedApp == nil)
+                
+                // Settings toggle
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showSettings.toggle()
+                        if showSettings {
+                            showAddShortcut = false
+                        }
+                    }
+                } label: {
+                    Image(systemName: showSettings ? "gearshape.fill" : "gearshape")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Settings")
             }
-            .buttonStyle(.plain)
-            .help("Settings")
-
             
-            // Pin toggle button
+            // Pin toggle button (always visible)
             Button {
                 viewModel.togglePin()
             } label: {
@@ -148,7 +169,7 @@ struct FloatingPanelContentView: View {
             .buttonStyle(.plain)
             .help(viewModel.isPinned ? "Unpin from top" : "Pin to top")
             
-            // Close button
+            // Close button (always visible)
             Button {
                 onClose?()
             } label: {

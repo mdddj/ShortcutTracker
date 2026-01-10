@@ -22,6 +22,14 @@ class FloatingPanelViewModel {
         }
     }
     
+    /// Whether the panel content is collapsed
+    var isCollapsed: Bool = false {
+        didSet {
+            let height: CGFloat = isCollapsed ? 50 : 400
+            panelController?.resizePanel(height: height)
+        }
+    }
+    
     /// Whether the panel is currently visible
     var isVisible: Bool {
         panelController?.isVisible ?? false
@@ -68,6 +76,11 @@ class FloatingPanelViewModel {
     /// Requirements: 4.4
     func togglePin() {
         isPinned.toggle()
+    }
+    
+    /// Toggles the collapsed state of the panel.
+    func toggleCollapse() {
+        isCollapsed.toggle()
     }
     
     /// Sets the transparency of the panel.

@@ -173,6 +173,29 @@ class FloatingPanelController: NSObject, ObservableObject {
         isVisible = false
     }
     
+    /// Resizes the panel to the specified height with animation.
+    /// - Parameter height: The new height for the panel
+    /// - Parameter animated: Whether to animate the resize
+    func resizePanel(height: CGFloat, animated: Bool = true) {
+        guard let panel = panel else { return }
+        
+        var frame = panel.frame
+        let oldHeight = frame.height
+        frame.size.height = height
+        // 保持底部位置不变，调整顶部
+        frame.origin.y += (oldHeight - height)
+        
+        if animated {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.2
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                panel.animator().setFrame(frame, display: true)
+            }
+        } else {
+            panel.setFrame(frame, display: true)
+        }
+    }
+    
     // MARK: - Private Methods
     
     /// Creates and configures the NSPanel.
