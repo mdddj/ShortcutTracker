@@ -9,6 +9,7 @@ extension KeystrokeOverlayController {
         case bottomRight = "bottomRight"
         case topLeft = "topLeft"
         case topRight = "topRight"
+        case custom = "custom"
 
         var displayName: String {
             switch self {
@@ -16,6 +17,7 @@ extension KeystrokeOverlayController {
             case .bottomRight: return "Bottom Right"
             case .topLeft: return "Top Left"
             case .topRight: return "Top Right"
+            case .custom: return "Custom"
             }
         }
 
@@ -25,6 +27,7 @@ extension KeystrokeOverlayController {
             case .bottomRight: return "arrow.down.right.square"
             case .topLeft: return "arrow.up.left.square"
             case .topRight: return "arrow.up.right.square"
+            case .custom: return "hand.point.up.left.and.text"
             }
         }
     }
@@ -178,6 +181,26 @@ class KeystrokeOverlayController: NSObject, ObservableObject {
         }
     }
 
+    @Published var customPositionX: CGFloat = 100 {
+        didSet {
+            guard !isInitializing else { return }
+            UserDefaults.standard.set(customPositionX, forKey: "KeystrokeOverlayCustomX")
+            if position == .custom {
+                updateWindowPosition()
+            }
+        }
+    }
+
+    @Published var customPositionY: CGFloat = 100 {
+        didSet {
+            guard !isInitializing else { return }
+            UserDefaults.standard.set(customPositionY, forKey: "KeystrokeOverlayCustomY")
+            if position == .custom {
+                updateWindowPosition()
+            }
+        }
+    }
+
     /// Computed property for background NSColor
     var backgroundColor: NSColor {
         NSColor(hex: backgroundColorHex) ?? .black
@@ -307,6 +330,12 @@ class KeystrokeOverlayController: NSObject, ObservableObject {
             position = pos
         }
 
+        // Load custom position
+        let savedCustomX = UserDefaults.standard.double(forKey: "KeystrokeOverlayCustomX")
+        let savedCustomY = UserDefaults.standard.double(forKey: "KeystrokeOverlayCustomY")
+        customPositionX = savedCustomX > 0 ? CGFloat(savedCustomX) : 100
+        customPositionY = savedCustomY > 0 ? CGFloat(savedCustomY) : 100
+
         // Load show mouse clicks
         showMouseClicks = UserDefaults.standard.bool(forKey: "KeystrokeOverlayShowMouseClicks")
 
@@ -379,10 +408,19 @@ class KeystrokeOverlayController: NSObject, ObservableObject {
             origin = NSPoint(x: screenFrame.minX + margin, y: screenFrame.maxY - windowSize.height - margin)
         case .topRight:
             origin = NSPoint(x: screenFrame.maxX - windowSize.width - margin, y: screenFrame.maxY - windowSize.height - margin)
+        case .custom:
+            origin = NSPoint(x: customPositionX, y: customPositionY)
         }
         
         let windowFrame = NSRect(origin: origin, size: windowSize)
         window.setFrame(windowFrame, display: true, animate: true)
+    }
+
+    /// Update custom position from picker window
+    func setCustomPosition(x: CGFloat, y: CGFloat) {
+        customPositionX = x
+        customPositionY = y
+        position = .custom
     }
 
     private func hideOverlay() {

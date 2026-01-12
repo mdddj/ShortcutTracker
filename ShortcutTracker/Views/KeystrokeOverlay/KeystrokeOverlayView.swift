@@ -10,26 +10,27 @@ struct KeystrokeOverlayView: View {
         case .bottomRight: return .bottomTrailing
         case .topLeft: return .topLeading
         case .topRight: return .topTrailing
+        case .custom: return .bottomLeading
         }
     }
 
     private var horizontalAlignment: HorizontalAlignment {
         switch controller.position {
-        case .bottomLeft, .topLeft: return .leading
+        case .bottomLeft, .topLeft, .custom: return .leading
         case .bottomRight, .topRight: return .trailing
         }
     }
 
     private var insertionEdge: Edge {
         switch controller.position {
-        case .bottomLeft, .bottomRight: return .bottom
+        case .bottomLeft, .bottomRight, .custom: return .bottom
         case .topLeft, .topRight: return .top
         }
     }
 
     private var shouldReverse: Bool {
         switch controller.position {
-        case .bottomLeft, .bottomRight: return true
+        case .bottomLeft, .bottomRight, .custom: return true
         case .topLeft, .topRight: return false
         }
     }

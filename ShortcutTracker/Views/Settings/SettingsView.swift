@@ -510,6 +510,15 @@ struct KeystrokeOverlaySettingsTab: View {
         }
         return Font.system(size: size, weight: controller.isBold ? .bold : .regular, design: controller.fontDesign.swiftUIDesign)
     }
+    
+    private func showCustomPositionPicker() {
+        CustomPositionPickerController.shared.showPicker(
+            initialX: controller.customPositionX,
+            initialY: controller.customPositionY
+        ) { x, y in
+            controller.setCustomPosition(x: x, y: y)
+        }
+    }
 
     var body: some View {
         Form {
@@ -609,6 +618,24 @@ struct KeystrokeOverlaySettingsTab: View {
                     }
                 }
                 .pickerStyle(.radioGroup)
+                
+                if controller.position == .custom {
+                    HStack {
+                        Text("Current: (\(Int(controller.customPositionX)), \(Int(controller.customPositionY)))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                }
+                
+                Button("Set Custom Position...") {
+                    showCustomPositionPicker()
+                }
+                .buttonStyle(.bordered)
+                
+                Text("Click to show a draggable preview box. Drag it to your desired position and click Save.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Timing") {
