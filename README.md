@@ -164,3 +164,4 @@ MIT License
 ## 📮 联系
 
 如有问题或建议，请通过 [GitHub Issues](https://github.com/mdddj/ShortcutTracker/issues) 联系。
+QQ: 413153189
